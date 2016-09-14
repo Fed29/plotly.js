@@ -88,7 +88,12 @@ var µ = module.exports = { version: '0.2.2' };
                 return d.r;
             })));
             if (axisConfig.radialAxis.domain != µ.DATAEXTENT) extent[0] = 0;
-            radialScale = d3.scale.linear().domain(axisConfig.radialAxis.domain != µ.DATAEXTENT && axisConfig.radialAxis.domain ? axisConfig.radialAxis.domain : extent).range([ 0, radius ]);
+            radialAxisDomain = extent;
+            if(axisConfig.radialAxis.domain != µ.DATAEXTENT && axisConfig.radialAxis.domain) {
+                radialAxisDomain = axisConfig.radialAxis.domain;
+                radialAxisDomain[1] += + 1;
+            }
+            radialScale = d3.scale.linear().domain(radialAxisDomain).range([0, radius]);
             liveConfig.layout.radialAxis.domain = radialScale.domain();
             var angularDataMerged = µ.util.flattenArray(data.map(function(d, i) {
                 return d.t;
@@ -224,7 +229,8 @@ var µ = module.exports = { version: '0.2.2' };
             }
             var radialAxis = svg.select('.radial.axis-group');
             if (axisConfig.radialAxis.gridLinesVisible) {
-                var gridCircles = radialAxis.selectAll('circle.grid-circle').data(radialScale.ticks(5));
+                var radialScaleTicks = radialScale.ticks(Math.abs(axisConfig.radialAxis.domain[1]-axisConfig.radialAxis.domain[0]))
+                var gridCircles = radialAxis.selectAll('circle.grid-circle').data(radialScaleTicks);
                 gridCircles.enter().append('circle').attr({
                     'class': 'grid-circle'
                 }).style(lineStyle);
@@ -244,13 +250,18 @@ var µ = module.exports = { version: '0.2.2' };
                 return angularScale(d) % 360 + axisConfig.orientation;
             }
             if (axisConfig.radialAxis.visible) {
-                var axis = d3.svg.axis().scale(radialScale).ticks(5).tickSize(5);
+                // var axis = d3.svg.axis().scale(radialScale).ticks(10).tickSize(10);
+                var axis = d3.svg.axis().scale(radialScale);
                 radialAxis.call(axis).attr({
                     transform: 'rotate(' + axisConfig.radialAxis.orientation + ')'
                 });
                 radialAxis.selectAll('.domain').style(lineStyle);
                 radialAxis.selectAll('g>text').text(function(d, i) {
-                    return this.textContent + axisConfig.radialAxis.ticksSuffix;
+                    // return this.textContent + axisConfig.radialAxis.ticksSuffix;
+                    if(i < gridCircles[0].length -1)
+                        return d + axisConfig.radialAxis.ticksSuffix;
+
+                    return "" // don't write out of the circles
                 }).style(fontStyle).style({
                     'text-anchor': 'start'
                 }).attr({
@@ -261,7 +272,11 @@ var µ = module.exports = { version: '0.2.2' };
                     transform: function(d, i) {
                         if (axisConfig.radialAxis.tickOrientation === 'horizontal') {
                             return 'rotate(' + -axisConfig.radialAxis.orientation + ') translate(' + [ 0, fontStyle['font-size'] ] + ')';
-                        } else return 'translate(' + [ 0, fontStyle['font-size'] ] + ')';
+                        } else if(axisConfig.radialAxis.tickOrientation === 'centered') {
+                            return 'rotate(' + -axisConfig.radialAxis.orientation + ') translate(' + [ 0, -(fontStyle['font-size'] / 4) ] + ')';
+                        } else {
+                            return 'translate(' + [ 0, fontStyle['font-size'] ] + ')';
+                        }
                     }
                 });
                 radialAxis.selectAll('g>line').style({
