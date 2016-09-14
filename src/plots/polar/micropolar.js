@@ -463,10 +463,12 @@ var µ = module.exports = { version: '0.2.2' };
                     });
                     var textData = {
                         t: µ.util.round(d[0]),
-                        r: µ.util.round(d[1])
+                        r: µ.util.round(d[1]),
+                        name: d[3]
                     };
                     if (isOrdinal) textData.t = ticks[d[0]];
-                    var text = 't: ' + textData.t + ', r: ' + textData.r;
+                    var positionText = 't: ' + textData.t + ', r: ' + textData.r;
+                    var text = textData.name ? textData.name : positionText;
                     var bbox = this.getBoundingClientRect();
                     var svgBBox = svg.node().getBoundingClientRect();
                     var pos = [ bbox.left + bbox.width / 2 - centeringOffset[0] - svgBBox.left, bbox.top + bbox.height / 2 - centeringOffset[1] - svgBBox.top ];
@@ -809,6 +811,7 @@ var µ = module.exports = { version: '0.2.2' };
             });
             var angularScale = geometryConfig.angularScale;
             var domainMin = geometryConfig.radialScale.domain()[0];
+            var domainMax = geometryConfig.radialScale.domain()[1];
             var generator = {};
             generator.bar = function(d, i, pI) {
                 var dataConfig = _config[pI].data;
@@ -948,7 +951,11 @@ var µ = module.exports = { version: '0.2.2' };
                 d3.select(this).attr({
                     transform: function(d, i) {
                         var coord = convertToCartesian(getPolarCoordinates(stackedData));
-                        return 'translate(' + [ coord.x, coord.y ] + ')';                    }
+                        var transformation = 'translate(' + [ coord.x, coord.y ] + ')';
+                        if(d[1] > domainMax)
+                            transformation += ' rotate(' + (d[0]-270) +')'
+                        return transformation;
+                    }
                 });
             };
             var textStyle = {
