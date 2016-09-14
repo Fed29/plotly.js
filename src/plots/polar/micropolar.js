@@ -415,7 +415,8 @@ var µ = module.exports = { version: '0.2.2' };
                     var angleWithOriginOffset = (mouseAngle + 180 + 360 - axisConfig.orientation) % 360;
                     angularValue = angularScale.invert(angleWithOriginOffset);
                     var pos = µ.util.convertToCartesian(radius + 12, mouseAngle + 180);
-                    angularTooltip.text(µ.util.round(angularValue)).move([ pos[0] + chartCenter[0], pos[1] + chartCenter[1] ]);
+                    // angularTooltip.text(µ.util.round(angularValue)).move([ pos[0] + chartCenter[0], pos[1] + chartCenter[1] ]);
+                    angularTooltip.text(Math.floor(angularValue)).move([ pos[0] + chartCenter[0], pos[1] + chartCenter[1] ]); // should be the name of the slice
                 }).on('mouseout.angular-guide', function(d, i) {
                     guides.select('line').style({
                         opacity: 0
@@ -435,7 +436,8 @@ var µ = module.exports = { version: '0.2.2' };
                 });
                 radialValue = radialScale.invert(µ.util.getMousePos(backgroundCircle).radius);
                 var pos = µ.util.convertToCartesian(r, axisConfig.radialAxis.orientation);
-                radialTooltip.text(µ.util.round(radialValue)).move([ pos[0] + chartCenter[0], pos[1] + chartCenter[1] ]);
+                // radialTooltip.text(µ.util.round(radialValue)).move([ pos[0] + chartCenter[0], pos[1] + chartCenter[1] ]);
+                radialTooltip.text(Math.floor(radialValue)).move([ pos[0] + chartCenter[0], pos[1] + chartCenter[1] ]);
             }).on('mouseout.radial-guide', function(d, i) {
                 angularGuideCircle.style({
                     opacity: 0
