@@ -798,7 +798,14 @@ var µ = module.exports = { version: '0.2.2' };
         container.datum(config).each(function(_config, _index) {
             var isStack = !!_config[0].data.yStack;
             var data = _config.map(function(d, i) {
-                if (isStack) return d3.zip(d.data.t[0], d.data.r[0], d.data.yStack[0]); else return d3.zip(d.data.t[0], d.data.r[0]);
+                d.data.markerColors = d.data.markerColors || 0
+                d.data.size = d.data.size || 100
+                d.data.text = d.data.text || 0
+
+                if (isStack)
+                    return d3.zip(d.data.t[0], d.data.r[0], d.data.yStack[0], d.data.text, d.data.size, d.data.markerColors);
+                else
+                    return d3.zip(d.data.t[0], d.data.r[0], 0, d.data.text, d.data.size, d.data.markerColors);
             });
             var angularScale = geometryConfig.angularScale;
             var domainMin = geometryConfig.radialScale.domain()[0];
@@ -818,7 +825,8 @@ var µ = module.exports = { version: '0.2.2' };
             };
             generator.dot = function(d, i, pI) {
                 var stackedData = d[2] ? [ d[0], d[1] + d[2] ] : d;
-                var symbol = d3.svg.symbol().size(_config[pI].data.dotSize).type(_config[pI].data.dotType)(d, i);
+                var dotSize = d[4] ? d[4] : _config[pI].data.dotSize;
+                var symbol = d3.svg.symbol().size(dotSize).type(_config[pI].data.dotType)(d, i);
                 d3.select(this).attr({
                     'class': 'mark dot',
                     d: symbol,
@@ -899,7 +907,7 @@ var µ = module.exports = { version: '0.2.2' };
             };
             var markStyle = {
                 fill: function(d, i, pI) {
-                    return _config[pI].data.color;
+                    return d[5] ? d[5] : _config[pI].data.color;
                 },
                 stroke: function(d, i, pI) {
                     return _config[pI].data.strokeColor;
@@ -917,6 +925,7 @@ var µ = module.exports = { version: '0.2.2' };
                     return typeof _config[pI].data.visible === 'undefined' || _config[pI].data.visible ? 'block' : 'none';
                 }
             };
+
             var geometryLayer = d3.select(this).selectAll('g.layer').data(data);
             geometryLayer.enter().append('g').attr({
                 'class': 'layer'
@@ -929,7 +938,39 @@ var µ = module.exports = { version: '0.2.2' };
             });
             geometry.style(markStyle).each(generator[geometryConfig.geometryType]);
             geometry.exit().remove();
+            // geometryLayer.exit().remove();
+
+
+            generator.text = function(d, i, pI) {
+                var stackedData = d[2] ? [ d[0], d[1] + d[2] ] : d;
+                d3.select(this).attr({
+                    transform: function(d, i) {
+                        var coord = convertToCartesian(getPolarCoordinates(stackedData));
+                        return 'translate(' + [ coord.x, coord.y ] + ')';                    }
+                });
+            };
+            var textStyle = {
+                opacity: function(d, i, pI) {
+                    return _config[pI].data.opacity;
+                },
+                display: function(d, i, pI) {
+                    return typeof _config[pI].data.visible === 'undefined' || _config[pI].data.visible ? 'block' : 'none';
+                }
+            };
+
+            var geometryText = geometryLayer.selectAll('text.mark-text').data(function(d, i) {
+                return d;
+            });
+            geometryText.enter().append('text').attr({
+                'class': 'mark-text'
+            });
+            geometryText.style(textStyle).each(generator.text);
+            geometryText.text(function(d,i) {
+                return d[3] ? d[3] : ""
+            });
+            geometryText.exit().remove();
             geometryLayer.exit().remove();
+
             function getPolarCoordinates(d, i) {
                 var r = geometryConfig.radialScale(d[1]);
                 var t = (geometryConfig.angularScale(d[0]) + geometryConfig.orientation) * Math.PI / 180;

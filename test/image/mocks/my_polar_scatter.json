@@ -7,7 +7,15 @@
       "t": [
         15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165
       ],
-      "text": ["text 1", "text 2", "text 3", "text 4"],
+      "text": [
+        "text 1", "text 2", "text 3", "text 4", "text 5", "text 6", "text 7", "text 8", "text 9", "text 10", "text 11"
+      ],
+      "size": [
+        100, 200, 150, 120, 200, 300, 200, 150, 120, 200, 180
+      ],
+      "markerColors": [
+        "rgb(27,158,10)", "rgb(27,158,10)", "rgb(27,158,19)", "rgb(27,158,9)", "rgb(27,8,119)", "rgb(27,158,119)", "rgb(27,158,119)", "rgb(27,158,119)", "rgb(27,158,119)", "rgb(27,158,119)", "rgb(27,158,119)"
+      ],
       "mode": "markers",
       "name": "Trial 1",
       "marker": {
@@ -25,8 +33,18 @@
     "font": {
       "size": 15
     },
-    "showlegend": false,
+    "showlegend": true,
     "plot_bgcolor": "rgb(223, 223, 223)",
+    "autosize": true,
+    "width": 1000,
+    "height": 1000,
+    "margin": {
+      "l": 50,
+      "r": 50,
+      "b": 0,
+      "t": 0,
+      "pad": 4
+    },
     "angularaxis": {
       "showticklabels": true,
       "visible": true,
