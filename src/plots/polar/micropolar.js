@@ -913,6 +913,8 @@ var µ = module.exports = { version: '0.2.2' };
                     return _config[pI].data.strokeColor;
                 },
                 'stroke-width': function(d, i, pI) {
+                    if(d[5] == "transparent")
+                        return "0px"
                     return _config[pI].data.strokeSize + 'px';
                 },
                 'stroke-dasharray': function(d, i, pI) {
