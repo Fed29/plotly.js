@@ -2,7 +2,7 @@
   "data": [
     {
       "r": [
-        2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2017, 2017, 2017, 2017
+        2005.5, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2017, 2017, 2017, 2017
       ],
       "t": [
         15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 0, 90, 200, 270
@@ -29,7 +29,6 @@
       "type": "scatter"
     }],
   "layout": {
-    "title": "Hobbs-Pearson Trials",
     "font": {
       "size": 15
     },
@@ -45,22 +44,27 @@
       "t": 0,
       "pad": 4
     },
+    "direction": "clockwise",
+    "labelOffset": 30,
     "angularaxis": {
       "showticklabels": true,
       "visible": true,
       "range": [0, 360],
       "showline": true,
-      "tickorientation": "horinzontal",
-      "tickcolor": "rgb(253,253,253)"
+      "tickorientation": "horizontal-centered",
+      "tickcolor": "rgb(253,253,253)",
+      "ticksCount": 6,
+      "tickLabels": ["text 1", "text 2", "text 3", "text 4", "text 5", "text 6"]
     },
     "radialaxis": {
       "orientation": 270,
       "showticklabels": true,
       "visible": true,
+      "domainLineVisible": false,
       "range": [2005, 2015],
-      "showline": true,
       "tickcolor": "rgb(253,253,253)",
-      "tickOrientation": "centered"
+      "tickorientation": "centered",
+      "gridLinesVisible": true
     },
     "showline": true
   }

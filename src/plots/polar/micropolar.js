@@ -122,7 +122,7 @@ var µ = module.exports = { version: '0.2.2' };
             var angularDomainWithPadding = angularDomain.slice();
             if (needsEndSpacing && isOrdinal) angularDomainWithPadding[1] += angularDomainStep;
             var tickCount = axisConfig.angularAxis.ticksCount || 4;
-            if (tickCount > 8) tickCount = tickCount / (tickCount / 8) + tickCount % 8;
+            // if (tickCount > 8) tickCount = tickCount / (tickCount / 8) + tickCount % 8;
             if (axisConfig.angularAxis.ticksStep) {
                 tickCount = (angularDomainWithPadding[1] - angularDomainWithPadding[0]) / tickCount;
             }
@@ -138,7 +138,7 @@ var µ = module.exports = { version: '0.2.2' };
             liveConfig.layout.angularAxis.endPadding = needsEndSpacing ? angularDomainStep : 0;
             svg = d3.select(this).select('svg.chart-root');
             if (typeof svg === 'undefined' || svg.empty()) {
-                var skeleton = "<svg xmlns='http://www.w3.org/2000/svg' class='chart-root'>' + '<g class='outer-group'>' + '<g class='chart-group'>' + '<circle class='background-circle'></circle>' + '<g class='geometry-group'></g>' + '<g class='radial axis-group'>' + '<circle class='outside-circle'></circle>' + '</g>' + '<g class='angular axis-group'></g>' + '<g class='guides-group'><line></line><circle r='0'></circle></g>' + '</g>' + '<g class='legend-group'></g>' + '<g class='tooltips-group'></g>' + '<g class='title-group'><text></text></g>' + '</g>' + '</svg>";
+                var skeleton = "<svg xmlns='http://www.w3.org/2000/svg' class='chart-root'>' + '<g class='outer-group'>' + '<g class='chart-group'>' + '<circle class='background-circle'></circle>' + '<g class='radial axis-group'>' + '<circle class='outside-circle'></circle>' + '</g>' + '<g class='angular axis-group'></g>' + '<g class='geometry-group'></g>' + '<g class='guides-group'><line></line><circle r='0'></circle></g>' + '</g>' + '<g class='legend-group'></g>' + '<g class='tooltips-group'></g>' + '<g class='title-group'><text></text></g>' + '</g>' + '</svg>";
                 var doc = new DOMParser().parseFromString(skeleton, 'application/xml');
                 var newSvg = this.appendChild(this.ownerDocument.importNode(doc.documentElement, true));
                 svg = d3.select(newSvg);
@@ -255,7 +255,14 @@ var µ = module.exports = { version: '0.2.2' };
                 radialAxis.call(axis).attr({
                     transform: 'rotate(' + axisConfig.radialAxis.orientation + ')'
                 });
-                radialAxis.selectAll('.domain').style(lineStyle);
+                if(axisConfig.radialAxis.domainLineVisible) {
+                    radialAxis.selectAll('.domain').style(lineStyle);
+                }
+                else {
+                    radialAxis.selectAll('.domain').style({
+                        display: 'none'
+                    });
+                }
                 radialAxis.selectAll('g>text').text(function(d, i) {
                     // return this.textContent + axisConfig.radialAxis.ticksSuffix;
                     if(i < gridCircles[0].length -1)
@@ -279,20 +286,23 @@ var µ = module.exports = { version: '0.2.2' };
                         }
                     }
                 });
-                radialAxis.selectAll('g>line').style({
-                    stroke: 'black'
-                });
+                // radialAxis.selectAll('g>line').style({ // short lines under radial labels
+                //     stroke: 'black'
+                // });
             }
-            var angularAxis = svg.select('.angular.axis-group').selectAll('g.angular-tick').data(angularAxisRange);
+            axisConfig.angularAxis.tickLabels = axisConfig.angularAxis.tickLabels || 0
+            var angularAxisData = d3.zip(angularAxisRange, axisConfig.angularAxis.tickLabels);
+            var angularAxis = svg.select('.angular.axis-group').selectAll('g.angular-tick').data(angularAxisData);
             var angularAxisEnter = angularAxis.enter().append('g').classed('angular-tick', true);
             angularAxis.attr({
                 transform: function(d, i) {
-                    return 'rotate(' + currentAngle(d, i) + ')';
+                    return 'rotate(' + currentAngle(d[0], i) + ')';
                 }
             }).style({
                 display: axisConfig.angularAxis.visible ? 'block' : 'none'
             });
             angularAxis.exit().remove();
+
             angularAxisEnter.append('line').classed('grid-line', true).classed('major', function(d, i) {
                 return i % (axisConfig.minorTicks + 1) == 0;
             }).classed('minor', function(d, i) {
@@ -312,10 +322,22 @@ var µ = module.exports = { version: '0.2.2' };
                 x: radius + axisConfig.labelOffset,
                 dy: '.35em',
                 transform: function(d, i) {
-                    var angle = currentAngle(d, i);
+                    var angle = currentAngle(d[0], i);
                     var rad = radius + axisConfig.labelOffset;
                     var orient = axisConfig.angularAxis.tickOrientation;
-                    if (orient == 'horizontal') return 'rotate(' + -angle + ' ' + rad + ' 0)'; else if (orient == 'radial') return angle < 270 && angle > 90 ? 'rotate(180 ' + rad + ' 0)' : null; else return 'rotate(' + (angle <= 180 && angle > 0 ? -90 : 90) + ' ' + rad + ' 0)';
+                    if (orient == 'horizontal') {
+                        return 'rotate(' + -angle + ' ' + rad + ' 0)';
+                    }
+                    else if (orient == 'radial') {
+                        return angle < 270 && angle > 90 ? 'rotate(180 ' + rad + ' 0)' : null;
+                    }
+                    else if(orient == "horizontal-centered") {
+                        var sliceCenterAngle = angularTicksStep/2
+                        coord = µ.util.movePointToCartesian(rad, 0, sliceCenterAngle)
+                        return 'translate('+coord+') rotate(' + -angle + ' ' + rad + ' 0)';
+                    } else {
+                        return 'rotate(' + (angle <= 180 && angle > 0 ? -90 : 90) + ' ' + rad + ' 0)';
+                    }
                 }
             }).style({
                 'text-anchor': 'middle',
@@ -323,8 +345,8 @@ var µ = module.exports = { version: '0.2.2' };
             }).text(function(d, i) {
                 if (i % (axisConfig.minorTicks + 1) != 0) return '';
                 if (ticks) {
-                    return ticks[d] + axisConfig.angularAxis.ticksSuffix;
-                } else return d + axisConfig.angularAxis.ticksSuffix;
+                    return ticks[d[0]] + axisConfig.angularAxis.ticksSuffix;
+                } else return d[1] + axisConfig.angularAxis.ticksSuffix;
             }).style(fontStyle);
             if (axisConfig.angularAxis.rewriteTicks) ticksText.text(function(d, i) {
                 if (i % (axisConfig.minorTicks + 1) != 0) return '';
@@ -405,18 +427,22 @@ var µ = module.exports = { version: '0.2.2' };
                     'pointer-events': 'none'
                 });
                 chartGroup.on('mousemove.angular-guide', function(d, i) {
-                    var mouseAngle = µ.util.getMousePos(backgroundCircle).angle;
-                    angularGuideLine.attr({
-                        x2: -radius,
-                        transform: 'rotate(' + mouseAngle + ')'
-                    }).style({
-                        opacity: .5
-                    });
-                    var angleWithOriginOffset = (mouseAngle + 180 + 360 - axisConfig.orientation) % 360;
-                    angularValue = angularScale.invert(angleWithOriginOffset);
-                    var pos = µ.util.convertToCartesian(radius + 12, mouseAngle + 180);
-                    // angularTooltip.text(µ.util.round(angularValue)).move([ pos[0] + chartCenter[0], pos[1] + chartCenter[1] ]);
-                    angularTooltip.text(Math.floor(angularValue)).move([ pos[0] + chartCenter[0], pos[1] + chartCenter[1] ]); // should be the name of the slice
+                    var mousePos = µ.util.getMousePos(backgroundCircle);
+                    var mouseAngle = mousePos.angle;
+                    var r = mousePos.radius;
+                    if(r < radius) {
+                        angularGuideLine.attr({
+                            x2: -radius,
+                            transform: 'rotate(' + mouseAngle + ')'
+                        }).style({
+                            opacity: .5
+                        });
+                        var angleWithOriginOffset = (mouseAngle + 180 + 360 - axisConfig.orientation) % 360;
+                        angularValue = angularScale.invert(angleWithOriginOffset);
+                        var pos = µ.util.convertToCartesian(radius + 12, mouseAngle + 180);
+                        // angularTooltip.text(µ.util.round(angularValue)).move([ pos[0] + chartCenter[0], pos[1] + chartCenter[1] ]);
+                        // angularTooltip.text(Math.floor(angularValue)).move([ pos[0] + chartCenter[0], pos[1] + chartCenter[1] ]); // should be the name of the slice
+                    }
                 }).on('mouseout.angular-guide', function(d, i) {
                     guides.select('line').style({
                         opacity: 0
@@ -429,15 +455,17 @@ var µ = module.exports = { version: '0.2.2' };
             });
             chartGroup.on('mousemove.radial-guide', function(d, i) {
                 var r = µ.util.getMousePos(backgroundCircle).radius;
-                angularGuideCircle.attr({
-                    r: r
-                }).style({
-                    opacity: .5
-                });
-                radialValue = radialScale.invert(µ.util.getMousePos(backgroundCircle).radius);
-                var pos = µ.util.convertToCartesian(r, axisConfig.radialAxis.orientation);
-                // radialTooltip.text(µ.util.round(radialValue)).move([ pos[0] + chartCenter[0], pos[1] + chartCenter[1] ]);
-                radialTooltip.text(Math.floor(radialValue)).move([ pos[0] + chartCenter[0], pos[1] + chartCenter[1] ]);
+                if(r<radius) {
+                    angularGuideCircle.attr({
+                        r: r
+                    }).style({
+                        opacity: .5
+                    });
+                    radialValue = radialScale.invert(µ.util.getMousePos(backgroundCircle).radius);
+                    var pos = µ.util.convertToCartesian(r, axisConfig.radialAxis.orientation);
+                    // radialTooltip.text(µ.util.round(radialValue)).move([ pos[0] + chartCenter[0], pos[1] + chartCenter[1] ]);
+                    radialTooltip.text(Math.floor(radialValue)).move([ pos[0] + chartCenter[0], pos[1] + chartCenter[1] ]);
+                }
             }).on('mouseout.radial-guide', function(d, i) {
                 angularGuideCircle.style({
                     opacity: 0
@@ -726,6 +754,14 @@ var µ = module.exports = { version: '0.2.2' };
     return [ x, y ];
 };
 
+µ.util.movePointToCartesian = function(radius, thetaFrom, thetaTo) {
+    var thetaRadiansFrom = thetaFrom * Math.PI / 180;
+    var thetaRadiansTo = thetaTo * Math.PI / 180;
+    var x = radius * (Math.cos(thetaRadiansTo)-Math.cos(thetaRadiansFrom));
+    var y = radius * (Math.sin(thetaRadiansTo)-Math.sin(thetaRadiansFrom));
+    return [ x, y ];
+}
+
 µ.util.round = function(_value, _digits) {
     var digits = _digits || 2;
     var mult = Math.pow(10, digits);
@@ -974,6 +1010,8 @@ var µ = module.exports = { version: '0.2.2' };
             });
             geometryText.enter().append('text').attr({
                 'class': 'mark-text'
+            }).classed("outer", function(d,i) {
+                return d[1] > domainMax;
             });
             geometryText.style(textStyle).each(generator.text);
             geometryText.text(function(d,i) {
