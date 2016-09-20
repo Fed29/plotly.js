@@ -1319,6 +1319,9 @@ var µ = module.exports = { version: '0.2.2' };
             fill: fillColor,
             'font-size': config.fontSize + 'px'
         }).text(text);
+        tooltipEl.style({
+            display: 'block'
+        });
         var padding = config.padding;
         var bbox = tooltipTextEl.node().getBBox();
         var boxStyle = {
@@ -1333,9 +1336,6 @@ var µ = module.exports = { version: '0.2.2' };
         }).style(boxStyle);
         tooltipEl.attr({
             transform: 'translate(' + [ tickSize, -backGroundH / 2 + padding * 2 ] + ')'
-        });
-        tooltipEl.style({
-            display: 'block'
         });
         return exports;
     };
