@@ -414,7 +414,8 @@ var µ = module.exports = { version: '0.2.2' };
             })();
             var geometryTooltip = µ.tooltipPanel().config({
                 container: tooltipContainer,
-                hasTick: true
+                hasTick: true,
+                nlines: 5
             })();
             var angularValue, radialValue;
             if (!isOrdinal) {
@@ -494,17 +495,18 @@ var µ = module.exports = { version: '0.2.2' };
                     var textData = {
                         t: µ.util.round(d[0]),
                         r: µ.util.round(d[1]),
-                        name: d[3]
+                        name: d[3],
+                        objData: d[6]
                     };
                     if (isOrdinal) textData.t = ticks[d[0]];
                     var positionText = 't: ' + textData.t + ', r: ' + textData.r;
-                    var text = textData.name ? textData.name : positionText;
+                    var text = textData.objData ? textData.objData : [positionText];
                     var bbox = this.getBoundingClientRect();
                     var svgBBox = svg.node().getBoundingClientRect();
                     var pos = [ bbox.left + bbox.width / 2 - centeringOffset[0] - svgBBox.left, bbox.top + bbox.height / 2 - centeringOffset[1] - svgBBox.top ];
                     geometryTooltip.config({
                         color: newColor
-                    }).text(text);
+                    })['text'].apply(this, text);
                     geometryTooltip.move(pos);
                 } else {
                     color = el.style('stroke');
@@ -838,14 +840,16 @@ var µ = module.exports = { version: '0.2.2' };
         container.datum(config).each(function(_config, _index) {
             var isStack = !!_config[0].data.yStack;
             var data = _config.map(function(d, i) {
-                d.data.markerColors = d.data.markerColors || 0
-                d.data.size = d.data.size || 100
-                d.data.text = d.data.text || 0
-
+                d.data.markerColors = d.data.markerColors || 0;
+                d.data.size = d.data.size || 100;
+                d.data.text = d.data.text || 0;
+                pickedObjData = d.data.objectData.map((o) => 
+                    _config[i].data.objectDatainTooltips.map((a) => o[a])
+                );
                 if (isStack)
-                    return d3.zip(d.data.t[0], d.data.r[0], d.data.yStack[0], d.data.text, d.data.size, d.data.markerColors);
+                    return d3.zip(d.data.t[0], d.data.r[0], d.data.yStack[0], d.data.text, d.data.size, d.data.markerColors, pickedObjData);
                 else
-                    return d3.zip(d.data.t[0], d.data.r[0], 0, d.data.text, d.data.size, d.data.markerColors);
+                    return d3.zip(d.data.t[0], d.data.r[0], 0, d.data.text, d.data.size, d.data.markerColors, pickedObjData);
             });
             var angularScale = geometryConfig.angularScale;
             var domainMin = geometryConfig.radialScale.domain()[0];
@@ -946,6 +950,18 @@ var µ = module.exports = { version: '0.2.2' };
                     }
                 });
             };
+            generator.text = function(d, i, pI) {
+                var stackedData = d[2] ? [ d[0], d[1] + d[2] ] : d;
+                d3.select(this).attr({
+                    transform: function(d, i) {
+                        var coord = convertToCartesian(getPolarCoordinates(stackedData));
+                        var transformation = 'translate(' + [ coord.x - 50, coord.y ] + ')';
+                        if(d[1] > domainMax)
+                            transformation += ' rotate(' + (d[0]-270) +')'
+                        return transformation;
+                    }
+                });
+            };
             var markStyle = {
                 fill: function(d, i, pI) {
                     return d[5] ? d[5] : _config[pI].data.color;
@@ -968,43 +984,19 @@ var µ = module.exports = { version: '0.2.2' };
                     return typeof _config[pI].data.visible === 'undefined' || _config[pI].data.visible ? 'block' : 'none';
                 }
             };
-
+            var textStyle = {
+                display: function(d, i, pI) {
+                    return typeof _config[pI].data.visible === 'undefined' || _config[pI].data.visible ? 'block' : 'none';
+                },
+                'font-size': function(d, i, pI) {
+                    return _config[pI].data.defaultMarkerFontSize;
+                } 
+            };
             var geometryLayer = d3.select(this).selectAll('g.layer').data(data);
             geometryLayer.enter().append('g').attr({
                 'class': 'layer'
             });
-            var geometry = geometryLayer.selectAll('path.mark').data(function(d, i) {
-                return d;
-            });
-            geometry.enter().append('path').attr({
-                'class': 'mark'
-            });
-            geometry.style(markStyle).each(generator[geometryConfig.geometryType]);
-            geometry.exit().remove();
-            // geometryLayer.exit().remove();
-
-
-            generator.text = function(d, i, pI) {
-                var stackedData = d[2] ? [ d[0], d[1] + d[2] ] : d;
-                d3.select(this).attr({
-                    transform: function(d, i) {
-                        var coord = convertToCartesian(getPolarCoordinates(stackedData));
-                        var transformation = 'translate(' + [ coord.x, coord.y ] + ')';
-                        if(d[1] > domainMax)
-                            transformation += ' rotate(' + (d[0]-270) +')'
-                        return transformation;
-                    }
-                });
-            };
-            var textStyle = {
-                opacity: function(d, i, pI) {
-                    return _config[pI].data.opacity;
-                },
-                display: function(d, i, pI) {
-                    return typeof _config[pI].data.visible === 'undefined' || _config[pI].data.visible ? 'block' : 'none';
-                }
-            };
-
+            // start: add markers-text
             var geometryText = geometryLayer.selectAll('text.mark-text').data(function(d, i) {
                 return d;
             });
@@ -1018,6 +1010,17 @@ var µ = module.exports = { version: '0.2.2' };
                 return d[3] ? d[3] : ""
             });
             geometryText.exit().remove();
+            // end: add markers-text
+            // start: add markers
+            var geometry = geometryLayer.selectAll('path.mark').data(function(d, i) {
+                return d;
+            });
+            geometry.enter().append('path').attr({
+                'class': 'mark'
+            });
+            geometry.style(markStyle).each(generator[geometryConfig.geometryType]);
+            geometry.exit().remove();
+            // end: add markers
             geometryLayer.exit().remove();
 
             function getPolarCoordinates(d, i) {
@@ -1282,13 +1285,14 @@ var µ = module.exports = { version: '0.2.2' };
 };
 
 µ.tooltipPanel = function() {
-    var tooltipEl, tooltipTextEl, backgroundEl;
+    var tooltipEl, tooltipTextElems, backgroundEl;
     var config = {
         container: null,
         hasTick: false,
         fontSize: 12,
         color: 'white',
-        padding: 5
+        padding: 5,
+        nlines: 1
     };
     var id = 'tooltip-' + µ.tooltipPanel.uid++;
     var tickSize = 10;
@@ -1304,26 +1308,61 @@ var µ = module.exports = { version: '0.2.2' };
         }).attr({
             d: 'M0 0'
         });
-        tooltipTextEl = tooltipEnter.append('text').attr({
-            dx: config.padding + tickSize,
-            dy: +config.fontSize * .3
-        });
+        tooltipTextElems = []
+        for(var i = 0; i < config.nlines; i++) {
+            tooltipTextElems.push(tooltipEnter.append('text').attr({
+                dx: config.padding + tickSize,
+                dy: config.fontSize * (i + 1) + config.fontSize * .3 * (i + 1)
+            }));
+        }
         return exports;
     };
-    exports.text = function(_text) {
+    exports.text = function() {
         var l = d3.hsl(config.color).l;
         var strokeColor = l >= .5 ? '#aaa' : 'white';
         var fillColor = l >= .5 ? 'black' : 'white';
-        var text = _text || '';
-        tooltipTextEl.style({
-            fill: fillColor,
-            'font-size': config.fontSize + 'px'
-        }).text(text);
+        var text = [''];
+        if(arguments.length > 0) {
+            text = [];
+            for (var i = 0; i < arguments.length; i++) {
+                text.push(arguments[i]);
+            }
+        }
+        for(var ti in tooltipTextElems) {
+            var tooltipTextEl=tooltipTextElems[ti]
+            tooltipTextEl.style({
+                fill: fillColor,
+                'font-size': config.fontSize + 'px'
+            }).text(text[ti] || '');
+        }
         tooltipEl.style({
             display: 'block'
         });
         var padding = config.padding;
-        var bbox = tooltipTextEl.node().getBBox();
+        var bboxes = tooltipTextElems.map((tooltipTextEl) => tooltipTextEl.node().getBBox());
+        var widths = bboxes.map((bb)=>bb.width);
+        var heights = bboxes.map((bb)=>bb.height);
+        var ys = bboxes.map((bb)=>bb.y);
+        var avgY = ys.reduce(function(a, b) {
+                        return a + b;
+                        }, 0
+                ) / bboxes.length
+        var bbox = {
+            height: heights.reduce(function(a, b) {
+                        return a + b;
+                        }, 0
+                    ),
+            width: Math.max.apply(this,widths),
+            x: bboxes[0].x,
+            y: avgY
+        }
+        for(var ti in tooltipTextElems) {
+            var tooltipTextEl=tooltipTextElems[ti]
+            tooltipTextEl.attr({
+                transform: 'translate(0, -' + (avgY + heights[0] / 2) + ')'
+            });
+        }
+
         var boxStyle = {
             fill: config.color,
             stroke: strokeColor,
@@ -1389,6 +1428,7 @@ var µ = module.exports = { version: '0.2.2' };
                     [ r, [ 'marker', 'symbol' ], [ 'dotType' ] ],
                     [ r, [ 'marker', 'size' ], [ 'dotSize' ] ],
                     [ r, [ 'marker', 'barWidth' ], [ 'barWidth' ] ],
+                    [ r, [ 'marker', 'font-size' ], [ 'defaultMarkerFontSize' ] ],
                     [ r, [ 'line', 'interpolation' ], [ 'lineInterpolation' ] ],
                     [ r, [ 'showlegend' ], [ 'visibleInLegend' ] ]
                 ];
