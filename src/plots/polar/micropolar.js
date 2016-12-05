@@ -138,7 +138,7 @@ var µ = module.exports = { version: '0.2.2' };
             liveConfig.layout.angularAxis.endPadding = needsEndSpacing ? angularDomainStep : 0;
             svg = d3.select(this).select('svg.chart-root');
             if (typeof svg === 'undefined' || svg.empty()) {
-                var skeleton = "<svg xmlns='http://www.w3.org/2000/svg' class='chart-root'>' + '<g class='outer-group'>' + '<g class='chart-group'>' + '<circle class='background-circle'></circle>' + '<g class='radial axis-group'>' + '<circle class='outside-circle'></circle>' + '</g>' + '<g class='angular axis-group'></g>' + '<g class='geometry-group'></g>' + '<g class='guides-group'><line></line><circle r='0'></circle></g>' + '</g>' + '<g class='legend-group'></g>' + '<g class='tooltips-group'></g>' + '<g class='title-group'><text></text></g>' + '</g>' + '</svg>";
+                var skeleton = "<svg xmlns='http://www.w3.org/2000/svg' class='chart-root'>' + '<g class='outer-group'>' + '<g class='chart-group'>' + '<circle class='background-circle'></circle>' + '<g class='radial axis-group'>' + '<circle class='outside-circle'></circle>' + '</g>' + '<g class='angular axis-group'></g>' + '<g class='guides-group'><line></line><circle r='0'></circle>' + '</g>' + '<g class='center-image-group'></g>' + '<g class='geometry-group'></g>' + '</g>' + '<g class='legend-group'></g>' + '<g class='tooltips-group'></g>' + '<g class='title-group'><text></text></g>' + '</g>' + '</svg>";
                 var doc = new DOMParser().parseFromString(skeleton, 'application/xml');
                 var newSvg = this.appendChild(this.ownerDocument.importNode(doc.documentElement, true));
                 svg = d3.select(newSvg);
@@ -307,9 +307,15 @@ var µ = module.exports = { version: '0.2.2' };
                 return i % (axisConfig.minorTicks + 1) == 0;
             }).classed('minor', function(d, i) {
                 return !(i % (axisConfig.minorTicks + 1) == 0);
+            }).classed('special', function(d, i) {
+                return axisConfig.angularAxis.specialTicks.indexOf(i) !== -1;
             }).style(lineStyle);
             angularAxisEnter.selectAll('.minor').style({
                 stroke: axisConfig.minorTickColor
+            });
+            angularAxisEnter.selectAll('.special').style({
+                "stroke": axisConfig.angularAxis.specialTickStyle.stroke,
+                "stroke-width": axisConfig.angularAxis.specialTickStyle.strokeWidth                
             });
             angularAxis.select('line.grid-line').attr({
                 x1: axisConfig.tickLength ? radius - axisConfig.tickLength : 0,
@@ -352,6 +358,23 @@ var µ = module.exports = { version: '0.2.2' };
                 if (i % (axisConfig.minorTicks + 1) != 0) return '';
                 return axisConfig.angularAxis.rewriteTicks(this.textContent, i);
             });
+
+            var dim = 2*radialScale(axisConfig.radialAxis.centerImage.dimesion)
+            var centerImageDimensions = {
+                height: dim,
+                width: dim
+            };
+            var centerImage = svg.select('.center-image-group').selectAll('image').data(['image1']);
+            centerImage.enter()
+                .append("image")
+                .attr({
+                    'xlink:href': axisConfig.radialAxis.centerImage.url,
+                    x: 0,
+                    y: 0,
+                    height: centerImageDimensions.height,
+                    width: centerImageDimensions.width,
+                    transform: 'translate(' + [-centerImageDimensions.width / 2, -centerImageDimensions.height / 2] + ')'
+                });
             var rightmostTickEndX = d3.max(chartGroup.selectAll('.angular-tick text')[0].map(function(d, i) {
                 return d.getCTM().e + d.getBBox().width;
             }));
@@ -955,7 +978,7 @@ var µ = module.exports = { version: '0.2.2' };
                 d3.select(this).attr({
                     transform: function(d, i) {
                         var coord = convertToCartesian(getPolarCoordinates(stackedData));
-                        var transformation = 'translate(' + [ coord.x - 50, coord.y ] + ')';
+                        var transformation = 'translate(' + [ coord.x, coord.y ] + ')';
                         if(d[1] > domainMax)
                             transformation += ' rotate(' + (d[0]-270) +')'
                         return transformation;
@@ -1009,6 +1032,17 @@ var µ = module.exports = { version: '0.2.2' };
             geometryText.text(function(d,i) {
                 return d[3] ? d[3] : ""
             });
+
+            geometryText.each(function(d) {
+                var gtext = d3.select(this);
+                var actualTransformSplit = gtext.attr('transform').split(',');
+                var actualBbox = gtext.node().getBBox();
+                gtext.attr({
+                    transform: 'translate(' + 
+                        (actualTransformSplit[0].replace('translate(', '') - actualBbox.width / 2) + ',' +
+                        actualTransformSplit[1]
+                });
+            })
             geometryText.exit().remove();
             // end: add markers-text
             // start: add markers
