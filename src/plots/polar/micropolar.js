@@ -1024,9 +1024,13 @@ var µ = module.exports = { version: '0.2.2' };
                 gtext.attr({
                     transform: function(d, i) {
                         var coord = convertToCartesian(getPolarCoordinates(stackedData));
-                        var transformation = 'translate(' + [ coord.x - actualBbox.width / 2, coord.y ] + ')';
-                        if(d[1] > domainMax)
+                        var transformation = ''
+                        if(d[1] > domainMax) {
+                            transformation = 'translate(' + [ coord.x, coord.y ] + ')';
                             transformation += ' rotate(' + (d[0]-270) +')'
+                        } else {
+                            transformation = 'translate(' + [ coord.x - actualBbox.width / 2, coord.y ] + ')';
+                        }
                         return transformation;
                     }
                 });
