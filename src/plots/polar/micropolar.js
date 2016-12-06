@@ -867,7 +867,7 @@ var µ = module.exports = { version: '0.2.2' };
                 d.data.size = d.data.size || 100;
                 d.data.text = d.data.text || 0;
                 pickedObjData = d.data.objectData.map((o) => 
-                    _config[i].data.objectDatainTooltips.map((a) => o[a])
+                    _config[i].data.objectDatainTooltips.map((a) => (o[a] ? o[a] : '')) 
                 );
                 if (isStack)
                     return d3.zip(d.data.t[0], d.data.r[0], d.data.yStack[0], d.data.text, d.data.size, d.data.markerColors, pickedObjData);
