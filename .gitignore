@@ -15,3 +15,4 @@ npm-debug.log*
 !/.eslintrc
 !/.eslintignore
 test/image/mocks/my_real_polar_scatter.json
+test/image/mocks/my_real_polar_scatter_2.json
