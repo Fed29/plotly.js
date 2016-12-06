@@ -973,18 +973,6 @@ var µ = module.exports = { version: '0.2.2' };
                     }
                 });
             };
-            generator.text = function(d, i, pI) {
-                var stackedData = d[2] ? [ d[0], d[1] + d[2] ] : d;
-                d3.select(this).attr({
-                    transform: function(d, i) {
-                        var coord = convertToCartesian(getPolarCoordinates(stackedData));
-                        var transformation = 'translate(' + [ coord.x, coord.y ] + ')';
-                        if(d[1] > domainMax)
-                            transformation += ' rotate(' + (d[0]-270) +')'
-                        return transformation;
-                    }
-                });
-            };
             var markStyle = {
                 fill: function(d, i, pI) {
                     return d[5] ? d[5] : _config[pI].data.color;
@@ -1012,7 +1000,7 @@ var µ = module.exports = { version: '0.2.2' };
                     return typeof _config[pI].data.visible === 'undefined' || _config[pI].data.visible ? 'block' : 'none';
                 },
                 'font-size': function(d, i, pI) {
-                    return _config[pI].data.defaultMarkerFontSize;
+                    return _config[pI].data.defaultMarkerFontSize + 'px';
                 } 
             };
             var geometryLayer = d3.select(this).selectAll('g.layer').data(data);
@@ -1028,19 +1016,22 @@ var µ = module.exports = { version: '0.2.2' };
             }).classed("outer", function(d,i) {
                 return d[1] > domainMax;
             });
-            geometryText.style(textStyle).each(generator.text);
+            geometryText.style(textStyle);
             geometryText.text(function(d,i) {
                 return d[3] ? d[3] : ""
             });
-
-            geometryText.each(function(d) {
+            geometryText.each(function(d, i, pI) {
+                var stackedData = d[2] ? [ d[0], d[1] + d[2] ] : d;
                 var gtext = d3.select(this);
-                var actualTransformSplit = gtext.attr('transform').split(',');
                 var actualBbox = gtext.node().getBBox();
                 gtext.attr({
-                    transform: 'translate(' + 
-                        (actualTransformSplit[0].replace('translate(', '') - actualBbox.width / 2) + ',' +
-                        actualTransformSplit[1]
+                    transform: function(d, i) {
+                        var coord = convertToCartesian(getPolarCoordinates(stackedData));
+                        var transformation = 'translate(' + [ coord.x - actualBbox.width / 2, coord.y ] + ')';
+                        if(d[1] > domainMax)
+                            transformation += ' rotate(' + (d[0]-270) +')'
+                        return transformation;
+                    }
                 });
             })
             geometryText.exit().remove();
